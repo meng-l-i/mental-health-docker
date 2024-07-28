@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+
+  mental-health-mysql:
+    container_name: mental-health-mysql
+    image: mysql:latest
+    volumes:
+      - ../mental-health/deploy/mysql:/data
+    environment:
+      - MYSQL_ROOT_PASSWORD=mengli
+      - MYSQL_PASSWORD=mengli
+    network_mode: "container:mental-health-nginx"
+    command: mysqld --init-file=/data/platform_test.sql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mental-health-redis:
+    container_name: mental-health-redis
+    image: redis:latest
+    network_mode: "container:mental-health-nginx"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mental-health-rabbitmq:
+    container_name: mental-health-rabbitmq
+    image: rabbitmq:latest
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=mengli
+    network_mode: "container:mental-health-nginx"
+
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
