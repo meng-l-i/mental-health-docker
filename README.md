@@ -10,7 +10,7 @@ docker-compose -f docker-compose-data.yml up -d
 docker-compose -f docker-compose-server.yml up -d
 docker-compose -f docker-compose-web.yml up -d
 ```
-**2**
+**2**</br>
 Start nginx separately and start the other services at once. At this point, the business processes will run in separate containers.
 Use the following code:</br>
 ```
