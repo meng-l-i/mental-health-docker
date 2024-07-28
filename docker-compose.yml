@@ -1,0 +1,280 @@
+version: '3.8'
+
+services:
+
+  mental-health-mysql:
+    container_name: mental-health-mysql
+    image: mysql:latest
+    volumes:
+      - ../mental-health/deploy/mysql:/data
+    environment:
+      - MYSQL_ROOT_PASSWORD=mengli
+      - MYSQL_PASSWORD=mengli
+    network_mode: "container:mental-health-nginx"
+    command: mysqld --init-file=/data/mental-health.sql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mental-health-redis:
+    container_name: mental-health-redis
+    image: redis:latest
+    network_mode: "container:mental-health-nginx"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mental-health-rabbitmq:
+    container_name: mental-health-rabbitmq
+    image: rabbitmq:latest
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=mengli
+    network_mode: "container:mental-health-nginx"
+
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mental-health-config:
+    container_name: mental-health-config
+    build: ../mental-health/mental-health-config
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8769/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+ 
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+
+
+  mental-health-eureka:
+    build: ../mental-health/mental-health-eureka
+    container_name: mental-health-eureka
+    network_mode: "container:mental-health-nginx"
+    environment:
+      - SECURITY_USER_NAME=root
+      - SECURITY_USER_PASSWORD=mengli
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -u $${SECURITY_USER_NAME}:$${SECURITY_USER_PASSWORD} http://localhost:8761"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+#service_healthy
+
+
+  mental-health-auth:
+    container_name: mental-health-auth
+    build: ../mental-health/mental-health-auth
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+
+
+  mental-health-user:
+    container_name: mental-health-user
+    build: ../mental-health/mental-health-modules/mental-health-user
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+      mental-health-auth:
+        condition: service_started
+
+  mental-health-exam:
+    container_name: mental-health-exam
+    build: ../mental-health/mental-health-modules/mental-health-exam
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+      mental-health-user:
+        condition: service_started
+
+
+  mental-health-gateway:
+    container_name: mental-health-gateway
+    build: ../mental-health/mental-health-gateway
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+      mental-health-exam:
+        condition: service_started
+
+
+  mental-health-admin:
+    container_name: mental-health-admin
+    build: ../mental-health/mental-health-monitor/mental-health-admin
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+      mental-health-gateway:
+        condition: service_started
+
+  mental-health-zipkin:
+    container_name: mental-health-zipkin
+    build: ../mental-health/mental-health-monitor/mental-health-zipkin
+    network_mode: "container:mental-health-nginx"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
+
+    depends_on:
+      mental-health-mysql:
+        condition: service_healthy
+      mental-health-redis:
+        condition: service_healthy
+      mental-health-rabbitmq:
+        condition: service_healthy
+      mental-health-config:
+        condition: service_healthy
+      mental-health-eureka:
+        condition: service_healthy
+      mental-health-gateway:
+        condition: service_started
+
+
+  mental-health-backui:
+    container_name: mental-health-backui
+    build: ../mental-health-ui
+    network_mode: "container:mental-health-nginx"
+
+    depends_on:
+      mental-health-eureka:
+        condition: service_healthy
+
+
+  mental-health-frontui:
+    container_name: mental-health-frontui
+    build: ../mental-health-web
+    network_mode: "container:mental-health-nginx"
+
+    depends_on:
+      mental-health-eureka:
+        condition: service_healthy
