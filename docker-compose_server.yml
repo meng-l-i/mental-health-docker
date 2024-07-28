@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+
+  mental-health-server:
+    container_name: mental-health-server
+    build: ../mental-health
+
+    network_mode: "container:mental-health-nginx"
+    mem_limit: 6g
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 65535
+        hard: 65535
