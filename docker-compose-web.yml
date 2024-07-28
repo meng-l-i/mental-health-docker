@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  mental-health-backui:
+    container_name: mental-health-backui
+    build: ../mental-health-ui
+    network_mode: "container:mental-health-nginx"
+
+  mental-health-frontui:
+    container_name: mental-health-frontui
+    build: ../mental-health-web
+    network_mode: "container:mental-health-nginx"
