@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  mental-health-nginx:
+    container_name: mental-health-nginx
+    image: nginx:latest
+    ports:
+      - "9527:9527"
+      - "8080:8080"
+
+#     - "3306:3306"
+#     - "6379:6379"
+#     - "5672:5672"
